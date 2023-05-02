@@ -3,6 +3,7 @@ from models import db, User, Character, Favorite
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt, generate_password_hash, check_password_hash
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+from flask_cors import CORS
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
@@ -12,6 +13,7 @@ db.init_app(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
+CORS(app)
 
 @app.route("/")
 def home():
@@ -19,7 +21,7 @@ def home():
 
 #USERS
 
-@app.route("/users", methods=["POST"])
+@app.route("/users", methods=["POST"])                                  
 def create_user():
     user = User()
     user.username = request.json.get("username")
@@ -37,14 +39,14 @@ def create_user():
         "msg":"User have been created"
     }), 200
 
-@app.route("/login", methods=["POST"])
+@app.route("/login", methods=["POST"])                                  #creamos token para usiario válido
 def login():
     username = request.json.get("username")
     password = request.json.get("password")
     user = User.query.filter_by(username=username).first()              #chequea que el usuario exista
     if user is not None:
         is_valid = check_password_hash(user.password, password)         #chequea que la constraseña es válida
-        if is_valid:                                                    #ahora generamos token
+        if is_valid:                                                    #si la contraseña es válida, ahora generamos token
             access_token = create_access_token (identity=username)      #identity irá en el payload
             return jsonify({
                 "token": access_token
@@ -55,6 +57,7 @@ def login():
 
 
 @app.route("/users/list", methods=["GET"])
+@jwt_required()                                                          #token creado protege rutas. Para acceder a la ruta el token debe ser válido
 def get_users():
     users = User.query.all()
     result = []
