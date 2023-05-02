@@ -1,9 +1,17 @@
 from flask import Flask,request, jsonify
 from models import db, User, Character, Favorite
+from flask_migrate import Migrate
+from flask_bcrypt import Bcrypt, generate_password_hash, check_password_hash
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
+app.config['JWT_SECRET_KEY'] = "ultra-secret"                   #la llave secreta no debería estar en el código, sino que en guardado en variables de entorno
 db.init_app(app)
+
+migrate = Migrate(app, db)
+jwt = JWTManager(app)
+bcrypt = Bcrypt(app)
 
 @app.route("/")
 def home():
@@ -15,13 +23,36 @@ def home():
 def create_user():
     user = User()
     user.username = request.json.get("username")
-    user.password = request.json.get("password")
     user.age = request.json.get("age")
+
+    password = request.json.get("password")
+    password_hash = generate_password_hash(password)
+    user.password = password_hash
+    
 
     db.session.add(user)
     db.session.commit()
 
-    return "Usuario guardado", 200
+    return jsonify({
+        "msg":"User have been created"
+    }), 200
+
+@app.route("/login", methods=["POST"])
+def login():
+    username = request.json.get("username")
+    password = request.json.get("password")
+    user = User.query.filter_by(username=username).first()              #chequea que el usuario exista
+    if user is not None:
+        is_valid = check_password_hash(user.password, password)         #chequea que la constraseña es válida
+        if is_valid:                                                    #ahora generamos token
+            access_token = create_access_token (identity=username)      #identity irá en el payload
+            return jsonify({
+                "token": access_token
+            }), 200
+    else: jsonify({                                                     #si la contraseña no es válida, enviamos mensaje
+        "msg": "User does not exist or info is invalid"
+    }), 400                                                             #mejor 400 que 404, es mejor no dar más información para el usuario (caso de hackers)
+
 
 @app.route("/users/list", methods=["GET"])
 def get_users():
@@ -87,7 +118,7 @@ def update_characters(id):
             return jsonify("Personaje Eliminado"), 204
         else:
             character.patronus = request.json.get("patronus")
-            
+             
             db.session.commit()
             
             return jsonify("Personaje actualizado"), 200
@@ -126,8 +157,5 @@ def update_favorite(id):
     else:
         return jsonify("Usuario no encontrado muAjajaja i'm a teapot"), 418
 
-with app.app_context():
-    db.create_all()
-
-
-app.run(host="localhost", port="8080")
+if __name__ == "__main__":
+    app.run(host="localhost", port="8080")
