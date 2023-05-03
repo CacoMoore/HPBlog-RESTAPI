@@ -6,3 +6,6 @@ In this proyect I build a REST API for the proyect Harry Potter Blog in this rep
 
 ![image](https://user-images.githubusercontent.com/118777448/235217624-b97192ed-71bb-485e-a8b5-9b22da6d0b3f.png)
 
+![Screenshot HP Blog](https://user-images.githubusercontent.com/118777448/235948920-485f0ced-242a-403b-8619-f2acf50cf85a.png)
+
+
